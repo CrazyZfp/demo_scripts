@@ -1,6 +1,9 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import datetime as dtm
+import requests
+import json
 
 
 def boll_bands(df, n, k):
@@ -31,31 +34,59 @@ def draw_figure(df, n):
     plt.show()
 
 
-def df_init():
-    df = pd.Series([100, 45, 67, 8, 99, 99, 76, 32, 45, 66], name='Close')
+def sohu_stock(stock: str, start_date: str, end_date: str):
+    sohu_url = f"https://q.stock.sohu.com/hisHq?code={stock}&start={start_date.replace('-','')}&end={end_date}&stat=0&order=A&period=d&callback=historySearchHandler&rt=jsonp"
+    resp = requests.get(url=sohu_url)
+
+    prefix = 'historySearchHandler(['
+    postfix = '])'
+    json_body = json.loads(resp.text[len(prefix):(-len(postfix) - 1)])
+
+    date_list = []
+    close_list = []
+    for dhq in json_body.get('hq'):
+        date_list.append(dhq[0])
+        close_list.append(float(dhq[2]))
+
+    return date_list, close_list
+
+
+def df_init(start_date: str, days: int, stock: str):
+    sd = dtm.datetime.strptime(start_date, '%Y-%m-%d')
+    ed = sd + dtm.timedelta(days=(days - 1))
+    end_date = dtm.datetime.strftime(ed, '%Y%m%d')
+
+    date_list, close_list = sohu_stock(stock, start_date, end_date)
+    df = pd.Series(close_list, name='Close')
     df = pd.DataFrame(df)  # 得到的数据中index直接就是Date
 
-    date = pd.date_range(start='2020-09-09', periods=10, name='date')
-    df['date'] = date
+    date = pd.Series(date_list, name='date')
+    df = df.join(date)
+
+    date = pd.to_datetime(df['date'])
+    # date = pd.date_range(start=start_date, periods=days, name='date')
+    # df['date'] = date
     df.set_index('date', inplace=True)
     return df
 
 
-def bb_percent_calculate(bb, n):
-    bb['percent'] = abs((bb['Close'] - bb[f'MA{n}']) / bb[f'std{n}'])
+def bb_percent_calculate(bb, n, k):
+    bb['percent'] = (bb['Close'] - bb[f'MA{n}']) / (bb[f'std{n}'] * k)
     return bb
 
 
 def main():
-    n = 5
-    k = 2
+    bb_n = 15
+    bb_k = 2
+    start_date = '2022-05-10'
+    days = 200
+    stock = 'cn_600009'
 
-    df = df_init()
-    df = boll_bands(df, n, k)
-    df = bb_percent_calculate(df, n)
-    print(df.loc[:, ['low', 'up', 'percent', 'Close', f'MA{n}']])
+    df = df_init(start_date, days, stock)
+    df = boll_bands(df, bb_n, bb_k)
+    df = bb_percent_calculate(df, bb_n, bb_k)
 
-    draw_figure(df, n)
+    draw_figure(df, bb_n)
 
 
 if __name__ == '__main__':
