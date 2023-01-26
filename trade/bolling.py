@@ -25,15 +25,6 @@ def boll_bands(df, n, k):
     return df
 
 
-def draw_figure(df, n):
-    ax = df.plot(y=['low', 'up', 'Close', f'MA{n}'], x_compat=True)
-
-    ax2 = ax.twinx()
-    ax2.bar(x=df.index, height=df.percent, color=(0.5, 0.5, 0.5, 0.2))
-
-    plt.show()
-
-
 def sohu_stock(stock: str, start_date: str, end_date: str):
     sohu_url = f"https://q.stock.sohu.com/hisHq?code={stock}&start={start_date.replace('-','')}&end={end_date}&stat=0&order=A&period=d&callback=historySearchHandler&rt=jsonp"
     resp = requests.get(url=sohu_url)
@@ -52,8 +43,10 @@ def sohu_stock(stock: str, start_date: str, end_date: str):
 
 
 def df_init(start_date: str, days: int, stock: str):
-    sd = dtm.datetime.strptime(start_date, '%Y-%m-%d')
+    sd = dtm.datetime.strptime(start_date, '%Y-%m-%d').date()
     ed = sd + dtm.timedelta(days=(days - 1))
+    if ed > dtm.date.today():
+        ed = dtm.date.today()
     end_date = dtm.datetime.strftime(ed, '%Y%m%d')
 
     date_list, close_list = sohu_stock(stock, start_date, end_date)
@@ -70,17 +63,43 @@ def df_init(start_date: str, days: int, stock: str):
     return df
 
 
+def draw_figure(df: pd.DataFrame, n):
+    ax = df.plot(y=['low', 'up', 'Close', f'MA{n}'], x_compat=True)
+    # ax.set_zorder(10)
+
+    ax2 = ax.twinx()
+    # ax2.bar(x=df.index, height=df.p_diff, color=(0.5, 0.5, 0.5,0.3))
+    ax2.bar(x=df.index, height=df.percent, color=(0, 1, 0, 0.3), zorder=5)
+    # ax2.bar(x=df.index, height=df.log, color=(0, 0, 1, 0.3))
+    ax2.bar(x=df.index, height=df.p_avg2,color=(1, 0, 0, 0.3),  zorder = 5)
+    # ax2.bar(x=df.index, height=df.p_avg3,  zorder = 5)
+    # ax2.bar(x=df.index, height=df.p_avg4,  zorder = 5)
+
+    plt.grid()
+    plt.show()
+
+
 def bb_percent_calculate(bb, n, k):
     bb['percent'] = (bb['Close'] - bb[f'MA{n}']) / (bb[f'std{n}'] * k)
+
+    # diff = bb.Close - bb[f'MA{n}']
+    # bb['log'] = (diff/ np.abs(diff)) *  np.abs(np.log2(1 / np.abs(bb['percent'])))
+    bb['p_avg2'] = pd.Series(np.round(bb['percent'].rolling(7).mean(), 2),
+                             name='p_avg2')
+    # bb['p_avg3'] = pd.Series(np.round(bb['percent'].rolling(3).mean(), 2),
+    #                          name='p_avg3')
+    # bb['p_avg4'] = pd.Series(np.round(bb['percent'].rolling(4).mean(), 2),
+    #                          name='p_avg4')
+    # bb['p_diff'] = bb['percent'] - bb['percent'].shift(1)
     return bb
 
 
 def main():
     bb_n = 15
     bb_k = 2
-    start_date = '2022-05-10'
-    days = 200
-    stock = 'cn_600009'
+    start_date = '2022-07-10'
+    days = 2500
+    stock = 'cn_603650'
 
     df = df_init(start_date, days, stock)
     df = boll_bands(df, bb_n, bb_k)
