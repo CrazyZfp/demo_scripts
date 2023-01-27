@@ -1,5 +1,6 @@
 from model import Quote, Assets, TradingLog
-from typing import List, Tuple
+from constants import Confidence, Direction, Trend
+from typing import List, Tuple, Iterator
 import pandas as pd
 from bolling import boll_bands, bb_percent_calculate
 
@@ -12,7 +13,10 @@ class Strategy:
     def calcute_indices(self):
         pass
 
-    def execute(self) -> Tuple[int, int, float, str]:
+    def evaluate(self) -> Iterator[Tuple[Direction, Confidence, float, str]]:
+        """
+        :return 交易方向, 置信度, 价格, 日期
+        """
         pass
 
 
@@ -20,7 +24,7 @@ class BollingStrategy(Strategy):
     n: int
     k: int
 
-    def __init__(self, n:int= 15, k:int=2) -> None:
+    def __init__(self, n: int = 15, k: int = 2) -> None:
         super().__init__()
         self.n = n
         self.k = k
@@ -39,10 +43,28 @@ class BollingStrategy(Strategy):
         df = df.join(date)
 
         date = pd.to_datetime(df['date'])
-        df.set_index('date', inplace=True)
-        
+
         df = boll_bands(df, self.n, self.k)
         self.df = bb_percent_calculate(df, self.n, self.k)
 
-    def execute(self) -> Tuple[int, int, float, str]:
-        return super().execute()
+    def evaluate(self) -> Iterator[Tuple[Direction, Confidence, float, str]]:
+        pre_trend: Trend = None
+        for idx, row in self.df[self.df.p_avg3.notnull()].iterrows():
+            if idx == 0 or self.df.iloc[[idx - 1]].p_avg3.isnull().bool():
+                continue
+            if row.p_avg3 < self.df.iloc[[idx - 1]].p_avg3.item():
+                cur_trend: Trend = Trend.DOWN
+            elif row.p_avg3 > self.df.iloc[[idx - 1]].p_avg3.item():
+                cur_trend: Trend = Trend.UP
+            else:
+                cur_trend: Trend = Trend.HORIZONTAL
+
+            if pre_trend is None:
+                pass
+            elif pre_trend == cur_trend or cur_trend == Trend.HORIZONTAL:
+                continue
+            elif cur_trend == Trend.UP:
+                yield Direction.BUY, Confidence.HIGH if row.p_avg3 < -1 else Confidence.MIDDLE_LOW, row.Close, row.date
+            else:
+                yield Direction.SELL, Confidence.HIGH, row.Close, row.date
+            pre_trend = cur_trend

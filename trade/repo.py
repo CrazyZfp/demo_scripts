@@ -64,6 +64,8 @@ def sohu_stock(stock: str, start_date: str, end_date: str):
 
 
 if __name__ == '__main__':
-    # sohu_stock('cn_603650', '20200101', '20230120')
+    # sohu_stock('cn_300191', '20200101', '20230120')
+    # sohu_stock('cn_600103', '20200101', '20230120')
+    # sohu_stock('cn_600854', '20200101', '20230120')
     rows = query('603650', start_date='2020-01-02', end_da='2020-01-30')
-    print(rows)
+    # print(rows)

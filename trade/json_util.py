@@ -1,4 +1,5 @@
 from enum import Enum
+from constants import ChoiceEnum
 from typing import List, Type, Any, Callable, Union, Dict, Tuple, Set, FrozenSet
 import json
 
@@ -9,6 +10,12 @@ class JSONable:
 
     def to_json_str(self):
         return json.dumps(self.to_json())
+    
+    def __str__(self) -> str:
+        return self.to_json_str()
+
+    def __repr__(self) -> str:
+        return self.to_json_str()
 
 
 class JEncoder(json.JSONEncoder):
@@ -81,6 +88,11 @@ def convert_field(jsn, v):
     if isinstance(v, type):
         if v in (str, int, float, bool, list, tuple, set, frozenset):
             return jsn
+        elif issubclass(v, ChoiceEnum):
+            ce = v.code_of(jsn)
+            if not ce:
+                ce = v(jsn)
+            return ce
         elif issubclass(v, Enum):
             return v(jsn)
     elif __is_generic_alias(v, List, Tuple, Set, FrozenSet):
@@ -89,6 +101,11 @@ def convert_field(jsn, v):
         return convert_dict(jsn, v)
 
     return convert_object(jsn, v)
+
+def j(obj):
+    if isinstance(obj, JSONable):
+        return obj.to_json()
+    return to_json_object(obj)
 
 
 def to_json_object(obj):
@@ -99,15 +116,17 @@ def to_json_object(obj):
 
     if obj_type in (str, int, float, bool):
         return obj
+    elif issubclass(obj_type, ChoiceEnum):
+        return obj.code()
     elif issubclass(obj_type, Enum):
         return obj.name
     elif obj_type in (set, list, tuple, frozenset):
-        return [to_json_object(i) for i in obj]
+        return [j(i) for i in obj]
     elif obj_type == dict or __is_generic_alias(obj_type, Dict):
-        return dict((to_json_object(k), to_json_object(v)) for k, v in obj.items())
+        return dict((j(k), j(v)) for k, v in obj.items())
     else:
         # 双下划线开头的值不序列化
-        return dict((to_json_object(k), to_json_object(v))
+        return dict((j(k), j(v))
                     for k, v in obj.__dict__.items() if not is_protected_attr(str(k), type(obj).__name__))
 
 

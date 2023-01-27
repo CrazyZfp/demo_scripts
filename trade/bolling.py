@@ -59,7 +59,7 @@ def df_init(start_date: str, days: int, stock: str):
     date = pd.to_datetime(df['date'])
     # date = pd.date_range(start=start_date, periods=days, name='date')
     # df['date'] = date
-    df.set_index('date', inplace=True)
+    # df.set_index('date', inplace=True)
     return df
 
 
@@ -69,9 +69,9 @@ def draw_figure(df: pd.DataFrame, n):
 
     ax2 = ax.twinx()
     # ax2.bar(x=df.index, height=df.p_diff, color=(0.5, 0.5, 0.5,0.3))
-    ax2.bar(x=df.index, height=df.percent, color=(0, 1, 0, 0.3), zorder=5)
+    ax2.bar(x=df.date, height=df.percent, color=(0, 1, 0, 0.3), zorder=5)
     # ax2.bar(x=df.index, height=df.log, color=(0, 0, 1, 0.3))
-    ax2.bar(x=df.index, height=df.p_avg2,color=(1, 0, 0, 0.3),  zorder = 5)
+    ax2.bar(x=df.date, height=df.p_avg3,color=(1, 0, 0, 0.3),  zorder = 5)
     # ax2.bar(x=df.index, height=df.p_avg3,  zorder = 5)
     # ax2.bar(x=df.index, height=df.p_avg4,  zorder = 5)
 
@@ -84,8 +84,8 @@ def bb_percent_calculate(bb, n, k):
 
     # diff = bb.Close - bb[f'MA{n}']
     # bb['log'] = (diff/ np.abs(diff)) *  np.abs(np.log2(1 / np.abs(bb['percent'])))
-    bb['p_avg2'] = pd.Series(np.round(bb['percent'].rolling(7).mean(), 2),
-                             name='p_avg2')
+    bb['p_avg3'] = pd.Series(np.round(bb['percent'].rolling(3).mean(), 2),
+                             name='p_avg3')
     # bb['p_avg3'] = pd.Series(np.round(bb['percent'].rolling(3).mean(), 2),
     #                          name='p_avg3')
     # bb['p_avg4'] = pd.Series(np.round(bb['percent'].rolling(4).mean(), 2),
