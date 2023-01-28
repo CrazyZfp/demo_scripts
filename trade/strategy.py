@@ -2,7 +2,6 @@ from model import Quote, Assets, TradingLog
 from constants import Confidence, Direction, Trend
 from typing import List, Tuple, Iterator
 import pandas as pd
-from bolling import boll_bands, bb_percent_calculate
 from indices import BollingPercent
 
 
