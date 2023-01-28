@@ -3,6 +3,7 @@ from constants import Confidence, Direction, Trend
 from typing import List, Tuple, Iterator
 import pandas as pd
 from bolling import boll_bands, bb_percent_calculate
+from indices import BollingPercent
 
 
 class Strategy:
@@ -30,22 +31,9 @@ class BollingStrategy(Strategy):
         self.k = k
 
     def calcute_indices(self):
-        close_list = []
-        date_list = []
-        for q in self.quotes:
-            close_list.append(q.close)
-            date_list.append(q.date)
-
-        df = pd.Series(close_list, name='Close')
-        df = pd.DataFrame(df)  # 得到的数据中index直接就是Date
-
-        date = pd.Series(date_list, name='date')
-        df = df.join(date)
-
-        date = pd.to_datetime(df['date'])
-
-        df = boll_bands(df, self.n, self.k)
-        self.df = bb_percent_calculate(df, self.n, self.k)
+        idx = BollingPercent()
+        idx.dataframe_init(self.quotes)
+        self.df = idx.traverse_cal()
 
     def evaluate(self) -> Iterator[Tuple[Direction, Confidence, float, str]]:
         pre_trend: Trend = None
@@ -63,8 +51,9 @@ class BollingStrategy(Strategy):
                 pass
             elif pre_trend == cur_trend or cur_trend == Trend.HORIZONTAL:
                 continue
-            elif cur_trend == Trend.UP:
-                yield Direction.BUY, Confidence.HIGH if row.p_avg3 < -1 else Confidence.MIDDLE_LOW, row.Close, row.date
+            elif cur_trend == Trend.UP and self.df.iloc[[idx - 1
+                                                         ]].p_avg3.item() < -1:
+                yield Direction.BUY, Confidence.HIGH, row.close, row.date
             else:
-                yield Direction.SELL, Confidence.HIGH, row.Close, row.date
+                yield Direction.SELL, Confidence.HIGH, row.close, row.date
             pre_trend = cur_trend

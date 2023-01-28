@@ -5,7 +5,7 @@ from strategy import Strategy
 from json_util import convert_list
 import json
 from strategy import BollingStrategy
-from typing import List
+from typing import List, Dict
 
 pool = redis.ConnectionPool(host='localhost',
                             port=6379,
@@ -53,7 +53,8 @@ def launch(*codes,
 
         key = key_format.format(code, start_date, end_date)
 
-        quotes = convert_list(json.loads(r.get(key)), List[Quote])
+        quotes: List[Quote] = convert_list(json.loads(r.get(key)), List[Quote])
+        mt.quotes = quotes
 
         strategy.assets = mt.current_assets
         strategy.quotes = quotes
@@ -67,8 +68,12 @@ def launch(*codes,
 
 
 if __name__ == '__main__':
-    mt_map = launch('300191','600103','600854','603650',
-           start_date='2020-01-01',
-           end_date='2023-01-18',
-           strategy=BollingStrategy())
-    print(mt_map)
+    mt_map: Dict[str, MockTrading] = launch('600103.SH',
+                                            '600854.SH',
+                                            '603650.SH',
+                                            start_date='2020-01-01',
+                                            end_date='2023-01-18',
+                                            strategy=BollingStrategy())
+
+    for _, mt in mt_map.items():
+        print(f"{mt.report()}\n")

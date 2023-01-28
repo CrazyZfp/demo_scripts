@@ -1,1 +1,2 @@
-delete from stock_history;
+DELETE FROM stock_history;
+TRUNCATE TABLE stock_history;
