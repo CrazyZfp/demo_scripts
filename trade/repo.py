@@ -23,43 +23,23 @@ pg_pool = SimpleConnectionPool(user="postgres",
                                minconn=1,
                                maxconn=4)
 
-insert_sql = """INSERT INTO stock_history_{}(code, date_day, quote) VALUES {}
-ON CONFLICT (code, date_day) DO NOTHING;
+insert_sql = """INSERT INTO quote_history_{}(code, date_day, quote, asset_type) VALUES {}
+ON CONFLICT (code, date_day) DO UPDATE quote=EXCLUDED.quote;
 """
 
-select_sql = """SELECT code,quote FROM stock_history_{} WHERE code IN ({}) {} ORDER BY code ASC, date_day ASC;
+select_sql = """SELECT code,quote FROM quote_history_{} WHERE code IN ({}) {} ORDER BY code ASC, date_day ASC;
 """
-
-
-def table_creation(suffix):
-    create_sql = f"""
-    create table stock_history_{suffix}
-    (
-        id       bigserial   not null
-            constraint stock_history_pkey
-                primary key,
-        code     varchar(16) not null,
-        date_day date        not null,
-        quote    jsonb       not null
-    );
-
-    create unique index uix_{suffix}_code_date
-        on stock_history_{suffix} (code, date_day);
-    """
-    with pg_pool.getconn() as conn, conn.cursor() as cursor:
-        cursor.execute(create_sql)
-        conn.commit()
 
 
 def get_tab_suffix(code):
     return stock_code_re.search(code).group()[-1:]
 
 
-def save(code, quotes: List[Quote]):
+def save(code, quotes: List[Quote], asset_type: int = 0):
 
     tab_suffix = get_tab_suffix(code)
 
-    vals = ','.join(f'''('{code}','{q.date}'::DATE,'{q.to_json_str()}' )'''
+    vals = ','.join(f'''('{code}','{q.date}'::DATE,'{q.to_json_str()}',{asset_type})'''
                     for q in quotes)
 
     def save_in_conn(cursor, conn):
@@ -172,20 +152,21 @@ def tushare_stock(stock: str, start_date: str, end_date: str):
 
 
 if __name__ == '__main__':
-    limit = 50
-    offset=1620
+    limit = 100
+    offset = 0
     next = True
-    while next:
-        print(f'batch starting... offset={offset}, limit={limit}')
-        stocks, offset = stock_list(offset=offset, limit=limit)
-        if len(stocks) < limit:
-            next = False
-        for stock in stocks:
-            print(f"getting stock: {stock} ...")
-            tushare_stock(stock, '20200101', '20230120')
-            print(f"saved!")
-        print('suspend 10s ...')
-        time.sleep(10)
+    # while next:
+    # print(f'batch starting... offset={offset}, limit={limit}')
+    # stocks, offset = stock_list(offset=offset, limit=limit)
+    # if len(stocks) < limit:
+    # next = False
+    stocks = ['516010.SH']
+    for stock in stocks:
+        print(f"getting stock: {stock} ...")
+        tushare_stock(stock, '20120101', '20230206')
+        print(f"saved!")
+        # print('suspend 10s ...')
+        # time.sleep(10)
     # r = query('000001.SZ', '000002.SZ', start_date='20200101',end_date='20200110')
     # print(r)
 
