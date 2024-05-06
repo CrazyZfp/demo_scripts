@@ -1,7 +1,8 @@
-from typing import List
+from typing import List, Optional
 from json_util import JSONable
 import copy
 from constants import Direction, Confidence
+from datetime import datetime
 
 
 class Quote(JSONable):
@@ -49,6 +50,19 @@ def tushare_convert(row) -> Quote:
     return q
 
 
+def binance_convert(sq) -> Quote:
+    q = Quote()
+    q.date = datetime.fromtimestamp(sq[0] / 1000).strftime('%Y-%m-%d %H:%M:%S')
+    q.open = float(sq[1])
+    q.highest = float(sq[2])
+    q.lowest = float(sq[3])
+    q.close = float(sq[4])
+    q.volume = float(sq[5])
+    q.turnover = float(sq[7])
+
+    return q
+
+
 class TradingLog(JSONable):
     date: str
     direction: Direction  # -1 买进 / 1 卖出
@@ -67,7 +81,7 @@ class Position(JSONable):
     code: str
     volume: int
     avg_cost: float
-    worth: float
+    worth: Optional[float]
 
     def __init__(self, code: str):
         self.code = code
@@ -86,19 +100,19 @@ class Position(JSONable):
             self.avg_cost = 0
         else:
             self.avg_cost = (old_volume * self.avg_cost -
-                              amount_fee) / self.volume
+                             amount_fee) / self.volume
 
     def calculate_worth(self, close):
         self.worth = round(self.volume * close, 2)
 
     def report(self) -> str:
-        return f"""¥{self.worth}(¥{round(self.avg_cost,2)} * {self.volume}股)"""
+        return f"""¥{self.worth}(¥{round(self.avg_cost, 2)} * {self.volume}股)"""
 
 
 class Assets(JSONable):
     cash: float
     position: Position
-    worth: float
+    worth: Optional[float]
 
     def __init__(self, cash: float, position: Position):
         self.cash = cash
@@ -132,7 +146,7 @@ class MockTrading(JSONable):
     current_assets: Assets  # 当前资产
     start_date: str
     end_date: str
-    quotes: List[Quote]  # 区间行情
+    quotes: Optional[List[Quote]]  # 区间行情
     trading_logs: List[TradingLog]  # 交易记录
 
     def __init__(self, code, start_date, end_date, open_cash):
@@ -144,7 +158,6 @@ class MockTrading(JSONable):
         self.current_assets = copy.deepcopy(self.open_assets)
         self.trading_logs = []
         self.quotes = None
-
 
     def add_quote(self, quote: Quote):
         self.quotes.append(quote)
@@ -206,11 +219,10 @@ class MockTrading(JSONable):
         if direction == Direction.BUY:
             t_log.profit = "-"
         else:
-            t_log.profit = f"¥{round(t_log.cash_change - volume * self.current_assets.position.avg_cost,2)}"
+            t_log.profit = f"¥{round(t_log.cash_change - volume * self.current_assets.position.avg_cost, 2)}"
 
         self.current_assets.update(direction, volume, t_log.cash_change, close)
         t_log.worth = self.current_assets.worth
-
 
     def report(self) -> str:
         close = self.quotes[-1].close
@@ -223,19 +235,19 @@ class MockTrading(JSONable):
         for tl in self.trading_logs:
             if tl.direction == Direction.BUY:
                 continue
-            sell_count+=1
+            sell_count += 1
             if not tl.profit.startswith("¥-"):
-                win_count+=1
+                win_count += 1
 
         return f"""
 ========================================================================
                 {self.code}: {self.start_date} ~ {self.end_date}
 ========================================================================
 - 交易次数: {len(self.trading_logs)}
-- 胜率: {round(100*win_count/sell_count)}%
-- 盈利: ¥{round(self.current_assets.worth - self.open_assets.worth,2)}
-- 收益率: {round(100*(self.current_assets.worth - self.open_assets.worth)/self.open_assets.worth,2)}%
-- β收益率: {round(100*(self.quotes[-1].close - self.quotes[14].close)/ self.quotes[14].close, 2)}%  {round(self.quotes[14].close,2)}[{self.quotes[14].date}]->{round(self.quotes[-1].close,2)}[{self.quotes[-1].date}]
+- 胜率: {round(100 * win_count / sell_count)}%
+- 盈利: ¥{round(self.current_assets.worth - self.open_assets.worth, 2)}
+- 收益率: {round(100 * (self.current_assets.worth - self.open_assets.worth) / self.open_assets.worth, 2)}%
+- β收益率: {round(100 * (self.quotes[-1].close - self.quotes[14].close) / self.quotes[14].close, 2)}%  {round(self.quotes[14].close, 2)}[{self.quotes[14].date}]->{round(self.quotes[-1].close, 2)}[{self.quotes[-1].date}]
 - 期初资产: {self.open_assets.report()}
 - 期末资产: {self.current_assets.report()}
 ------------------------------------------------------------------------

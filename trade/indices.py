@@ -1,15 +1,14 @@
 from model import Quote
 import json
-from typing import List, Type, Set
+from typing import List, Type, Set, Optional
 import pandas as pd
 from pandas import DataFrame
 import numpy as np
 import matplotlib.pyplot as plt
 
 
-
 class Index:
-    df: DataFrame
+    df: Optional[DataFrame]
     rb_cols: Set[str]
     rb_idxs: List
 
@@ -95,10 +94,11 @@ class BollingPercent(Index):
 
         ax2 = ax.twinx()
         # ax2.bar(x=self.df.index, height=self.df.percent, color=(0, 1, 0, 0.3), zorder=5)
-        ax2.bar(x=self.df.index, height=self.df.p_avg3,color=(1, 0, 0, 0.3),  zorder = 5)
+        ax2.bar(x=self.df.index, height=self.df.p_avg3, color=(1, 0, 0, 0.3), zorder=5)
 
         plt.grid()
         plt.show()
+
 
 if __name__ == '__main__':
     # 通用配置 >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
