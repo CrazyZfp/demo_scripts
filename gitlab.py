@@ -1,3 +1,5 @@
+# 使用 gitlab 接口生成代码提交统计
+
 import requests
 
 headers = {
