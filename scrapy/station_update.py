@@ -1,3 +1,5 @@
+# 爬取全国火车站点并存储到PG数据库
+
 import requests
 import psycopg2
 import re
