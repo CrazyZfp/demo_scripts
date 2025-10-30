@@ -1,3 +1,5 @@
+// 图片添加水印
+
 import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
