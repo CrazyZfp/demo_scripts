@@ -1,6 +1,10 @@
 #! python3
 # -*- coding:utf-8 -*-
 
+"""
+按年份爬取全国行政区划及邮编
+"""
+
 import requests
 import grequests
 import psycopg2
